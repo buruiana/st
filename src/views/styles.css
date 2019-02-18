@@ -1,0 +1,27 @@
+.rct-header {
+  height: 20px !important;
+  overflow-x: visible !important;
+}
+.rct-top-header {
+  height: 0px !important;
+}
+
+.rct-item {
+  width: 200px !important;
+  border: 0px !important;
+  border-radius: 3px;
+  font-size: 0.05rem;
+}
+
+.rct-sidebar {
+  font-size: 0.05rem;
+  width: 300px !important;
+}
+
+.rct-outer {
+  height: 30px;
+}
+
+.rct-header-container {
+  height: 30px;
+}
