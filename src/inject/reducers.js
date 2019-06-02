@@ -1,5 +1,5 @@
-import { asEffect } from 'redux-saga/utils'
-import { combineReducers } from 'redux'
+import { asEffect } from "redux-saga/utils";
+import { combineReducers } from "redux";
 import {
   EFFECT_TRIGGERED,
   EFFECT_RESOLVED,
@@ -11,91 +11,102 @@ import {
   STATUS_RESOLVED,
   STATUS_REJECTED,
   STATUS_CANCELLED,
-} from '../constants'
+  SET_FILTERED
+} from "../constants";
 
-const CHILDREN = Symbol('CHILDREN')
+const CHILDREN = Symbol("CHILDREN");
 
 function getPathToEffect(effect, effectsById) {
-  let effectId = effect.effectId
-  const path = [effectId]
+  let effectId = effect.effectId;
+  const path = [effectId];
 
   while (effectId) {
-    effectId = effect.parentEffectId
+    effectId = effect.parentEffectId;
     if (effectId) {
-      path.push(effectId)
-      effect = effectsById[effectId]
+      path.push(effectId);
+      effect = effectsById[effectId];
     }
   }
-  return path.reverse()
+  return path.reverse();
+}
+
+export function filtered(state = [], action) {
+  if (action.type === SET_FILTERED) {
+    return { ...state, filtered: action.filtered };
+  }
+  return state;
 }
 
 export function rootEffectIds(state = [], action) {
   if (action.type === EFFECT_TRIGGERED && action.effect.root) {
-    return [...state, action.effect.effectId]
+    return [...state, action.effect.effectId];
   }
-  return state
+  return state;
 }
 
 export function effectIds(state = [], action) {
   switch (action.type) {
     case EFFECT_TRIGGERED:
-      return state.concat(action.effect.effectId)
+      return state.concat(action.effect.effectId);
     default:
-      return state
+      return state;
   }
 }
 
 export function effectsById(state = {}, action) {
-  console.log('console: -------------------', action);
-  let effectId, effect, newState
+  let effectId, effect, newState;
   switch (action.type) {
     case EFFECT_TRIGGERED:
-      effect = action.effect
-      effectId = effect.effectId
+      effect = action.effect;
+      effectId = effect.effectId;
       newState = {
         ...state,
         [effectId]: {
           ...effect,
+          idx: action.idx,
+          id: action.idx,
           status: STATUS_PENDING,
           start: action.time,
           name: action.name,
-          path: effect.parentEffectId ? getPathToEffect(effect, state) : [effectId],
+          path: effect.parentEffectId
+            ? getPathToEffect(effect, state)
+            : [effectId],
           [CHILDREN]: []
         }
-      }
+      };
       /**
         ugly  hack. store children along with the effects
         this shouldn't be accessed by any other outside UI
         it's only there so the maybeSetRaceWinner could access race's children
       **/
-      const parent = state[effect.parentEffectId]
+      const parent = state[effect.parentEffectId];
       if (parent && asEffect.race(parent.effect)) {
-        parent[CHILDREN].push(effect)
+        parent[CHILDREN].push(effect);
       }
-      return newState
+      return newState;
 
     case EFFECT_RESOLVED:
-      effectId = action.effectId
-      effect = state[effectId]
+      effectId = action.effectId;
+      effect = state[effectId];
       newState = {
         ...state,
         [effectId]: settleEffect(effect, action)
-      }
-      return maybeSetRaceWinner(effect, action.result, newState)
+      };
+      return maybeSetRaceWinner(effect, action.result, newState);
     case EFFECT_REJECTED:
-      effectId = action.effectId
+      effectId = action.effectId;
       return {
         ...state,
         [effectId]: settleEffect(state[effectId], action, true)
-      }
+      };
     case EFFECT_CANCELLED:
-      effectId = action.effectId
+      effectId = action.effectId;
       return {
         ...state,
         [effectId]: cancelEffect(state[effectId], action)
-      }
+      };
     default:
-      return state
+      return state;
   }
 }
 
@@ -106,8 +117,9 @@ function settleEffect(effect, action, isError) {
     error: action.error,
     status: isError ? STATUS_REJECTED : STATUS_RESOLVED,
     end: action.time,
+    idx: action.idx,
     time: action.time - effect.start
-  }
+  };
 }
 
 function cancelEffect(effect, action) {
@@ -115,50 +127,54 @@ function cancelEffect(effect, action) {
     ...effect,
     status: STATUS_CANCELLED,
     end: action.time,
+    idx: action.idx,
     time: action.time - effect.start
-  }
+  };
 }
 
 export function effectsByParentId(state = {}, action) {
   if (action.type === EFFECT_TRIGGERED) {
-    const effect = action.effect
-    const parentId = effect.parentEffectId
+    const effect = action.effect;
+    const parentId = effect.parentEffectId;
     if (parentId) {
-      const siblings = state[parentId]
+      const siblings = state[parentId];
       return {
         ...state,
-        [parentId]: !siblings ? [effect.effectId] : [...siblings, effect.effectId]
-      }
+        [parentId]: !siblings
+          ? [effect.effectId]
+          : [...siblings, effect.effectId]
+      };
     }
   }
-  return state
+  return state;
 }
 
 function maybeSetRaceWinner(effect, result, state) {
   if (asEffect.race(effect.effect)) {
-    const label = Object.keys(result)[0]
-    const children = effect[CHILDREN]
+    const label = Object.keys(result)[0];
+    const children = effect[CHILDREN];
     for (var i = 0; i < children.length; i++) {
-      const ch = children[i]
+      const ch = children[i];
       if (ch.label === label) {
         // we mutate the state, b/c we know it's already a new generated state from effectsById
         state[ch.effectId] = {
           ...state[ch.effectId],
           winner: true
-        }
-        return state
+        };
+        return state;
       }
     }
   }
-  return state
+  return state;
 }
 
 export function dispatchedActions(state = [], monitorAction) {
+  console.log("console: monitorAction", monitorAction);
   if (monitorAction.type === ACTION_DISPATCHED) {
-    const { id, action, time, isSagaAction } = monitorAction
-    return state.concat({ id, action, time, isSagaAction })
+    const { id, idx, action, time, isSagaAction } = monitorAction;
+    return state.concat({ idx, id, action, time, isSagaAction });
   }
-  return state
+  return state;
 }
 
 export function sharedRef(state = {}, action) {
@@ -166,9 +182,9 @@ export function sharedRef(state = {}, action) {
     return {
       ...state,
       [action.key]: action.sharedRef
-    }
+    };
   }
-  return state
+  return state;
 }
 
 export default combineReducers({
@@ -178,4 +194,5 @@ export default combineReducers({
   effectsByParentId,
   dispatchedActions,
   sharedRef,
-})
+  filtered
+});

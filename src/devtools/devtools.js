@@ -1,5 +1,5 @@
 (function () {
-    chrome.devtools.panels.create("Saga Timeline",
+    chrome.devtools.panels.create("SagaTimeline",
         "",
         "panel.html",
         function (panel) {
